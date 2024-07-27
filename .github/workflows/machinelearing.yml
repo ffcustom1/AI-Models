@@ -38,7 +38,7 @@ jobs:
 
     - name: Start ngrok tunnel and check for completion
       run: |
-        Start-Process -NoNewWindow -FilePath .\ngrok.exe -region in -ArgumentList 'tcp 3389'
+        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
         
         $signalFile = "C:\signal_file.txt"
         $ngrokRunning = $true
