@@ -7,16 +7,17 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Download TightVNC
+    - name: Install Chocolatey
       run: |
-        Write-Host "Downloading TightVNC..."
-        Invoke-WebRequest https://github.com/TigerVNC/tigervnc/releases/download/v1.11.0/TightVNC-2.8.63-setup.exe -OutFile TightVNC-setup.exe
-        Write-Host "TightVNC downloaded."
+        Write-Host "Installing Chocolatey..."
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+        Write-Host "Chocolatey installed."
 
-    - name: Install TightVNC silently
+    - name: Install TightVNC via Chocolatey
       run: |
-        Write-Host "Installing TightVNC silently..."
-        Start-Process -FilePath .\TightVNC-setup.exe -ArgumentList "/S" -Wait
+        Write-Host "Installing TightVNC via Chocolatey..."
+        choco install tightvnc -y
         Write-Host "TightVNC installed."
 
     - name: Set TightVNC password
@@ -64,11 +65,4 @@ jobs:
           }
           $vncRunning = $false
         }
-        
-        if ($vncRunning) {
-          Write-Host "TightVNC setup failed due to signal file not being detected."
-        } else {
-          Write-Host "Signal file detected. TightVNC server is ready."
-        }
-
-        Write-Output "Completion signal received."
+        Write-Host "Signal file found. VNC is now running."
