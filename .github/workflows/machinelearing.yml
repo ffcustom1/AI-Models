@@ -9,24 +9,36 @@ jobs:
     steps:
     - name: Download ngrok
       run: |
+        Write-Host "Starting download of ngrok..."
         Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+        Write-Host "ngrok.zip downloaded successfully."
+
+        Write-Host "Extracting ngrok..."
         Expand-Archive -Path ngrok.zip -DestinationPath .
+        Write-Host "ngrok extracted successfully."
 
     - name: Authenticate ngrok
       run: |
+        Write-Host "Starting ngrok authentication..."
         .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+        Write-Host "ngrok authentication successful."
+
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
     - name: Enable Remote Desktop
       run: |
+        Write-Host "Enabling Remote Desktop..."
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
+        Write-Host "Remote Desktop enabled successfully."
+
     - name: Create batch file on desktop
       run: |
+        Write-Host "Creating batch file on desktop..."
         $content = '@echo off
         setlocal
         echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
@@ -34,24 +46,33 @@ jobs:
         pause
         endlocal'
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
-
+        Write-Host "Batch file created successfully at: $env:USERPROFILE\Desktop\create_signal_file.bat"
 
     - name: Start ngrok tunnel and check for completion
       run: |
+        Write-Host "Starting ngrok tunnel on port 3389..."
         Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
-        
+        Write-Host "ngrok tunnel started."
+
         $signalFile = "C:\signal_file.txt"
         $ngrokRunning = $true
 
+        Write-Host "Checking for signal file presence..."
+
         while ($ngrokRunning) {
-          if (-not $ngrokRunning) { break }
+          if (-not $ngrokRunning) { 
+            Write-Host "ngrok process completed or was cancelled."
+            break
+          }
 
           if (-not (Test-Path $signalFile)) {
+            Write-Host "Signal file not found, waiting..."
             Start-Sleep -Seconds 60
             continue
           }
 
+          Write-Host "Signal file found. Completing ngrok process..."
           $ngrokRunning = $false
         }
 
-        Write-Output "Completion signal received."
+        Write-Host "Completion signal received. Exiting process."
