@@ -1,22 +1,57 @@
-name: Windows - LiteManager
+name: CI
 
-on:
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
   build:
-    name: Start Building...
     runs-on: windows-latest
-    timeout-minutes: 9999
-    
+
     steps:
-      - name: Downloading & Installing Essentials
-        run: |
-          Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
-          cmd /c Downloads.bat
+    - name: Download ngrok
+      run: |
+        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+        Expand-Archive -Path ngrok.zip -DestinationPath .
 
-      - name: Connect to LiteManager
-        run: cmd /c show.bat
+    - name: Authenticate ngrok
+      run: |
+        .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-      - name: Time Counter
-        run: cmd /c loop.bat
+    - name: Enable Remote Desktop
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+
+    - name: Create batch file on desktop
+      run: |
+        $content = '@echo off
+        setlocal
+        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
+
+        pause
+        endlocal'
+        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
+
+
+    - name: Start ngrok tunnel and check for completion
+      run: |
+        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
+        
+        $signalFile = "C:\signal_file.txt"
+        $ngrokRunning = $true
+
+        while ($ngrokRunning) {
+          if (-not $ngrokRunning) { break }
+
+          if (-not (Test-Path $signalFile)) {
+            Start-Sleep -Seconds 60
+            continue
+          }
+
+          $ngrokRunning = $false
+        }
+
+        Write-Output "Completion signal received."
