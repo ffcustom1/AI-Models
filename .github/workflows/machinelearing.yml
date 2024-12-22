@@ -36,6 +36,25 @@ jobs:
         endlocal'
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
 
+    - name: List all drives and directories along with storage
+      run: |
+        Write-Host "Listing all drives and directories along with storage information..."
+        
+        # Get list of all drives and their storage details
+        $drives = Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, MediaType, @{Name='Size(GB)'; Expression={[math]::round($_.Size / 1GB, 2)}}, @{Name='Free Space(GB)'; Expression={[math]::round($_.FreeSpace / 1GB, 2)}}
+        
+        $drives | ForEach-Object {
+          Write-Host "Drive: $($_.DeviceID)"
+          Write-Host "Media Type: $($_.MediaType)"
+          Write-Host "Size: $($_.'Size(GB)') GB"
+          Write-Host "Free Space: $($_.'Free Space(GB)') GB"
+          Write-Host ""
+        }
+
+        # Get list of directories from the root of each drive
+        foreach ($drive in $drives) {
+          $driveLetter = $drive.DeviceID
+
     - name: Start ngrok tunnel and check for completion
       run: |
         Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
@@ -56,24 +75,7 @@ jobs:
 
         Write-Output "Completion signal received."
 
-    - name: List all drives and directories along with storage
-      run: |
-        Write-Host "Listing all drives and directories along with storage information..."
-        
-        # Get list of all drives and their storage details
-        $drives = Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, MediaType, @{Name='Size(GB)'; Expression={[math]::round($_.Size / 1GB, 2)}}, @{Name='Free Space(GB)'; Expression={[math]::round($_.FreeSpace / 1GB, 2)}}
-        
-        $drives | ForEach-Object {
-          Write-Host "Drive: $($_.DeviceID)"
-          Write-Host "Media Type: $($_.MediaType)"
-          Write-Host "Size: $($_.'Size(GB)') GB"
-          Write-Host "Free Space: $($_.'Free Space(GB)') GB"
-          Write-Host ""
-        }
 
-        # Get list of directories from the root of each drive
-        foreach ($drive in $drives) {
-          $driveLetter = $drive.DeviceID
           Write-Host "Listing directories for drive: $driveLetter"
           Get-ChildItem "$driveLetter\" -Directory | ForEach-Object {
             Write-Host "Directory: $($_.FullName)"
