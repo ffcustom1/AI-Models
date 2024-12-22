@@ -7,16 +7,31 @@ jobs:
     runs-on: windows-2022
 
     steps:
-    - name: Download ngrok
+    - name: Download TightVNC Installer
       run: |
-        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-        Expand-Archive -Path ngrok.zip -DestinationPath .
+        Write-Host "Downloading TightVNC..."
+        Invoke-WebRequest -Uri "https://github.com/TigerVNC/tigervnc/releases/download/v1.11.0/tightvnc-2.8.59-setup.exe" -OutFile "tightvnc-setup.exe"
+        Write-Host "TightVNC downloaded successfully."
 
-    - name: Authenticate ngrok
+    - name: Install TightVNC Silently
       run: |
-        .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        Write-Host "Installing TightVNC silently..."
+        Start-Process -FilePath "tightvnc-setup.exe" -ArgumentList "/S" -Wait
+        Write-Host "TightVNC installed successfully."
+
+    - name: Start TightVNC Server
+      run: |
+        Write-Host "Starting TightVNC server..."
+        # Path to TightVNC server executable
+        $tightVNCPath = "C:\Program Files\TightVNC\TightVNCServer.exe"
+        
+        # Set a password (you can change the password as needed)
+        $password = "MySecretPassword"
+        $port = 5900
+        
+        # Start TightVNC server with specified password and port
+        Start-Process -FilePath $tightVNCPath -ArgumentList "-password $password -port $port"
+        Write-Host "TightVNC server started successfully on port $port."
 
     - name: Enable Remote Desktop
       run: |
@@ -27,57 +42,36 @@ jobs:
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
         Write-Host "Remote Desktop enabled successfully."
 
-    - name: Create batch file on desktop
+    - name: Create Signal File on Desktop
       run: |
-        $content = '@echo off
-        setlocal
-        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
-        pause
-        endlocal'
-        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
+        Write-Host "Creating signal file..."
+        $content = "Signal file created successfully."
+        Set-Content -Path "$env:USERPROFILE\Desktop\signal_file.txt" -Value $content
+        Write-Host "Signal file created successfully on Desktop."
 
-    - name: List all drives and directories along with storage
+    - name: Detect Signal File and Proceed
       run: |
-        Write-Host "Listing all drives and directories along with storage information..."
+        Write-Host "Detecting signal file to proceed..."
         
-        # Get list of all drives and their storage details
-        $drives = Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, MediaType, @{Name='Size(GB)'; Expression={[math]::round($_.Size / 1GB, 2)}}, @{Name='Free Space(GB)'; Expression={[math]::round($_.FreeSpace / 1GB, 2)}}
+        $signalFile = "$env:USERPROFILE\Desktop\signal_file.txt"
+        $maxRetries = 10
+        $retryCount = 0
         
-        $drives | ForEach-Object {
-          Write-Host "Drive: $($_.DeviceID)"
-          Write-Host "Media Type: $($_.MediaType)"
-          Write-Host "Size: $($_.'Size(GB)') GB"
-          Write-Host "Free Space: $($_.'Free Space(GB)') GB"
-          Write-Host ""
+        while ($retryCount -lt $maxRetries) {
+            if (Test-Path $signalFile) {
+                Write-Host "Signal file detected. Proceeding with the next steps."
+                break
+            } else {
+                Write-Host "Signal file not detected. Waiting for 30 seconds..."
+                Start-Sleep -Seconds 30
+                $retryCount++
+            }
         }
-
-        # Get list of directories from the root of each drive
-        foreach ($drive in $drives) {
-          $driveLetter = $drive.DeviceID
-
-    - name: Start ngrok tunnel and check for completion
-      run: |
-        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
         
-        $signalFile = "C:\signal_file.txt"
-        $ngrokRunning = $true
-
-        while ($ngrokRunning) {
-          if (-not $ngrokRunning) { break }
-
-          if (-not (Test-Path $signalFile)) {
-            Start-Sleep -Seconds 60
-            continue
-          }
-
-          $ngrokRunning = $false
+        if ($retryCount -eq $maxRetries) {
+            Write-Host "Maximum retries reached. Signal file not detected. Exiting."
+            exit 1
         }
+        
+        Write-Host "Signal file detected, proceeding."
 
-        Write-Output "Completion signal received."
-
-
-          Write-Host "Listing directories for drive: $driveLetter"
-          Get-ChildItem "$driveLetter\" -Directory | ForEach-Object {
-            Write-Host "Directory: $($_.FullName)"
-          }
-        }
