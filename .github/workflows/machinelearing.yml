@@ -7,47 +7,33 @@ jobs:
     runs-on: windows-2025
 
     steps:
-    - name: Install ngrok using Chocolatey
+    - name: Install Node.js
       run: |
-        choco install ngrok -y
+        # Download and install Node.js (necessary for localtunnel)
+        Invoke-WebRequest -Uri "https://nodejs.org/dist/v16.16.0/node-v16.16.0-x64.msi" -OutFile "nodejs.msi"
+        Start-Process msiexec.exe -ArgumentList '/i', 'nodejs.msi', '/quiet', '/norestart' -Wait
 
-    - name: Authenticate ngrok
+    - name: Install LocalTunnel
       run: |
-        ngrok config add-authtoken 2Xf9VS1X9J8Cm0fDUD0WGUbGm4a_6YSNePWcAamMrBHixXB2X
+        # Install LocalTunnel globally
+        npm install -g localtunnel
 
     - name: Enable Remote Desktop
       run: |
+        # Enable RDP
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
-    - name: Create batch file on desktop
+    - name: Start LocalTunnel for RDP
       run: |
-        $content = '@echo off
-        setlocal
-        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
+        # Expose the local RDP port (3389) via localtunnel
+        lt --port 3389
+        Write-Output "LocalTunnel started successfully"
 
-        pause
-        endlocal'
-        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
-
-    - name: Start ngrok tunnel and check for completion
+    - name: Wait for Tunnel to Stabilize
       run: |
-        Start-Process -NoNewWindow -FilePath ngrok -ArgumentList 'tcp 3389'
-        
-        $signalFile = "C:\signal_file.txt"
-        $ngrokRunning = $true
-
-        while ($ngrokRunning) {
-          if (-not $ngrokRunning) { break }
-
-          if (-not (Test-Path $signalFile)) {
-            Start-Sleep -Seconds 60
-            continue
-          }
-
-          $ngrokRunning = $false
-        }
-
-        Write-Output "Completion signal received."
+        # A simple wait time to ensure tunnel is active
+        Start-Sleep -Seconds 60
+        Write-Output "Waiting for tunnel to stabilize"
