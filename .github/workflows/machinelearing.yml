@@ -10,12 +10,12 @@ jobs:
     - name: Download TightVNC
       run: |
         Write-Host "Downloading TightVNC installer..."
-        Invoke-WebRequest -Uri https://www.tightvnc.com/download.php -OutFile TightVNCSetup.exe
+        Invoke-WebRequest -Uri https://www.tightvnc.com/download.php -OutFile C:\TightVNCSetup.exe
 
     - name: Install TightVNC
       run: |
         Write-Host "Installing TightVNC silently..."
-        Start-Process -FilePath "TightVNCSetup.exe" -ArgumentList "/S" -Wait
+        Start-Process -FilePath "C:\TightVNCSetup.exe" -ArgumentList "/S" -Wait
 
     - name: Start TightVNC Server
       run: |
