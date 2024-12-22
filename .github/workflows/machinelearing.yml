@@ -35,7 +35,7 @@ jobs:
         endlocal"
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
 
-    - name: Start ngrok tunnel and check for completion
+        - name: Start ngrok tunnel and check for completion
       run: |
         Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389' -PassThru | Out-File -FilePath C:\ngrok.log -Append
         
@@ -47,16 +47,17 @@ jobs:
         while ($ngrokRunning) {
           if ($elapsed -ge $timeout) {
             Write-Output "Timeout reached while waiting for signal file."
+            Get-Content C:\ngrok.log
             Exit 1
           }
 
           if (-not (Test-Path $signalFile)) {
+            Write-Output "Signal file not found. Retrying..."
             Start-Sleep -Seconds 10
             $elapsed += 10
             continue
           }
 
+          Write-Output "Signal file found!"
           $ngrokRunning = $false
         }
-
-        Write-Output "Completion signal received."
