@@ -7,16 +7,13 @@ jobs:
     runs-on: windows-2025
 
     steps:
-    - name: Download ngrok
+    - name: Install ngrok using Chocolatey
       run: |
-        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-        Expand-Archive -Path ngrok.zip -DestinationPath .
+        choco install ngrok -y
 
     - name: Authenticate ngrok
       run: |
-        .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        ngrok config add-authtoken 2Xf9VS1X9J8Cm0fDUD0WGUbGm4a_6YSNePWcAamMrBHixXB2X
 
     - name: Enable Remote Desktop
       run: |
@@ -35,10 +32,9 @@ jobs:
         endlocal'
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
 
-
     - name: Start ngrok tunnel and check for completion
       run: |
-        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
+        Start-Process -NoNewWindow -FilePath ngrok -ArgumentList 'tcp 3389'
         
         $signalFile = "C:\signal_file.txt"
         $ngrokRunning = $true
