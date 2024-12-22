@@ -27,15 +27,14 @@ jobs:
 
     - name: Create batch file on desktop
       run: |
-        $content = "@echo off
+        $content = '@echo off
         setlocal
         echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
-
         pause
-        endlocal"
+        endlocal'
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
 
-        - name: Start ngrok tunnel and check for completion
+    - name: Start ngrok tunnel and check for completion
       run: |
         Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389' -PassThru | Out-File -FilePath C:\ngrok.log -Append
         
@@ -47,6 +46,7 @@ jobs:
         while ($ngrokRunning) {
           if ($elapsed -ge $timeout) {
             Write-Output "Timeout reached while waiting for signal file."
+            Write-Output "ngrok log content:"
             Get-Content C:\ngrok.log
             Exit 1
           }
@@ -61,3 +61,5 @@ jobs:
           Write-Output "Signal file found!"
           $ngrokRunning = $false
         }
+
+        Write-Output "Completion signal received. ngrok tunnel is active."
