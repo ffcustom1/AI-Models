@@ -1,22 +1,74 @@
-name: Windows - LiteManager
+name: CI
 
-on:
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
   build:
-    name: Start Building...
     runs-on: windows-latest
-    timeout-minutes: 9999
-    
+
     steps:
-      - name: Downloading & Installing Essentials
-        run: |
-          Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
-          cmd /c Downloads.bat
+    - name: Download TightVNC
+      run: |
+        Write-Host "Downloading TightVNC..."
+        Invoke-WebRequest https://github.com/TigerVNC/tigervnc/releases/download/v1.11.0/TightVNC-2.8.63-setup.exe -OutFile TightVNC-setup.exe
+        Write-Host "TightVNC downloaded."
 
-      - name: Connect to LiteManager
-        run: cmd /c show.bat
+    - name: Install TightVNC silently
+      run: |
+        Write-Host "Installing TightVNC silently..."
+        Start-Process -FilePath .\TightVNC-setup.exe -ArgumentList "/S" -Wait
+        Write-Host "TightVNC installed."
 
-      - name: Time Counter
-        run: cmd /c loop.bat
+    - name: Set TightVNC password
+      run: |
+        Write-Host "Setting TightVNC password..."
+        $vncPassword = "YourPasswordHere"
+        Set-ItemProperty -Path "HKCU:\Software\TightVNC\Server" -Name "Password" -Value $vncPassword
+        Write-Host "Password set successfully."
+
+    - name: Enable TightVNC server service
+      run: |
+        Write-Host "Starting TightVNC server..."
+        Start-Service -Name "tvnserver"
+        Write-Host "TightVNC server started."
+
+    - name: Create batch file on desktop
+      run: |
+        Write-Host "Creating batch file to generate signal file..."
+        $content = '@echo off
+        setlocal
+        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
+        pause
+        endlocal'
+        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
+        Write-Host "Batch file 'create_signal_file.bat' created successfully."
+
+    - name: Wait for signal file and monitor VNC status
+      run: |
+        Write-Host "Waiting for signal file..."
+        $signalFile = "C:\signal_file.txt"
+        $vncRunning = $true
+        $retryCount = 0
+        $maxRetries = 10
+        while ($vncRunning) {
+          Write-Host "Checking if signal file exists..."
+          if (-not (Test-Path $signalFile)) {
+            Write-Host "Signal file not found, waiting for 60 seconds..."
+            Start-Sleep -Seconds 60
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+              Write-Host "Maximum retries reached. Signal file not found."
+              break
+            }
+            continue
+          }
+          $vncRunning = $false
+        }
+        
+        if ($vncRunning) {
+          Write-Host "TightVNC setup failed due to signal file not being detected."
+        } else {
+          Write-Host "Signal file detected. TightVNC server is ready."
+        }
+
+        Write-Output "Completion signal received."
