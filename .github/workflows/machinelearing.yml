@@ -1,77 +1,22 @@
-name: CI
+name: Windows - LiteManager
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-2022
-
+    name: Start Building...
+    runs-on: windows-latest
+    timeout-minutes: 9999
+    
     steps:
-    - name: Download TightVNC Installer
-      run: |
-        Write-Host "Downloading TightVNC..."
-        Invoke-WebRequest -Uri "https://github.com/TigerVNC/tigervnc/releases/download/v1.11.0/tightvnc-2.8.59-setup.exe" -OutFile "tightvnc-setup.exe"
-        Write-Host "TightVNC downloaded successfully."
+      - name: Downloading & Installing Essentials
+        run: |
+          Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
+          cmd /c Downloads.bat
 
-    - name: Install TightVNC Silently
-      run: |
-        Write-Host "Installing TightVNC silently..."
-        Start-Process -FilePath "tightvnc-setup.exe" -ArgumentList "/S" -Wait
-        Write-Host "TightVNC installed successfully."
+      - name: Connect to LiteManager
+        run: cmd /c show.bat
 
-    - name: Start TightVNC Server
-      run: |
-        Write-Host "Starting TightVNC server..."
-        # Path to TightVNC server executable
-        $tightVNCPath = "C:\Program Files\TightVNC\TightVNCServer.exe"
-        
-        # Set a password (you can change the password as needed)
-        $password = "MySecretPassword"
-        $port = 5900
-        
-        # Start TightVNC server with specified password and port
-        Start-Process -FilePath $tightVNCPath -ArgumentList "-password $password -port $port"
-        Write-Host "TightVNC server started successfully on port $port."
-
-    - name: Enable Remote Desktop
-      run: |
-        Write-Host "Enabling Remote Desktop..."
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
-        Write-Host "Remote Desktop enabled successfully."
-
-    - name: Create Signal File on Desktop
-      run: |
-        Write-Host "Creating signal file..."
-        $content = "Signal file created successfully."
-        Set-Content -Path "$env:USERPROFILE\Desktop\signal_file.txt" -Value $content
-        Write-Host "Signal file created successfully on Desktop."
-
-    - name: Detect Signal File and Proceed
-      run: |
-        Write-Host "Detecting signal file to proceed..."
-        
-        $signalFile = "$env:USERPROFILE\Desktop\signal_file.txt"
-        $maxRetries = 10
-        $retryCount = 0
-        
-        while ($retryCount -lt $maxRetries) {
-            if (Test-Path $signalFile) {
-                Write-Host "Signal file detected. Proceeding with the next steps."
-                break
-            } else {
-                Write-Host "Signal file not detected. Waiting for 30 seconds..."
-                Start-Sleep -Seconds 30
-                $retryCount++
-            }
-        }
-        
-        if ($retryCount -eq $maxRetries) {
-            Write-Host "Maximum retries reached. Signal file not detected. Exiting."
-            exit 1
-        }
-        
-        Write-Host "Signal file detected, proceeding."
-
+      - name: Time Counter
+        run: cmd /c loop.bat
