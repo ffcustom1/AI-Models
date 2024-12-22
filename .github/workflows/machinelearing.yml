@@ -25,13 +25,33 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
-    - name: Start ngrok tunnel
+    - name: Create batch file on desktop
+      run: |
+        $content = '@echo off
+        setlocal
+        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
+
+        pause
+        endlocal'
+        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
+
+
+    - name: Start ngrok tunnel and check for completion
       run: |
         Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
+        
+        $signalFile = "C:\signal_file.txt"
+        $ngrokRunning = $true
 
-    - name: Keep job alive
-      run: |
-        Write-Output "RDP is active. Keeping the job alive."
-        while ($true) {
-          Start-Sleep -Seconds 3600
+        while ($ngrokRunning) {
+          if (-not $ngrokRunning) { break }
+
+          if (-not (Test-Path $signalFile)) {
+            Start-Sleep -Seconds 60
+            continue
+          }
+
+          $ngrokRunning = $false
         }
+
+        Write-Output "Completion signal received."
