@@ -27,18 +27,20 @@ jobs:
 
     - name: Create batch file on desktop
       run: |
-        $content = '@echo off
+        $desktopPath = [Environment]::GetFolderPath('Desktop')
+        $batchContent = '@echo off
         setlocal
-        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
+        echo Creating signal_file.txt on Desktop... && echo. > "' + $desktopPath + '\signal_file.txt" && echo Signal file created successfully.
         pause
         endlocal'
-        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
+        Set-Content -Path "$desktopPath\create_signal_file.bat" -Value $batchContent
 
     - name: Start ngrok tunnel and check for completion
       run: |
-        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389' -PassThru | Out-File -FilePath C:\ngrok.log -Append
-        
-        $signalFile = "C:\signal_file.txt"
+        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389' -PassThru | Out-File -FilePath $env:USERPROFILE\ngrok.log -Append
+
+        $desktopPath = [Environment]::GetFolderPath('Desktop')
+        $signalFile = "$desktopPath\signal_file.txt"
         $timeout = 300 # Timeout in seconds (5 minutes)
         $elapsed = 0
         $ngrokRunning = $true
@@ -47,18 +49,18 @@ jobs:
           if ($elapsed -ge $timeout) {
             Write-Output "Timeout reached while waiting for signal file."
             Write-Output "ngrok log content:"
-            Get-Content C:\ngrok.log
+            Get-Content $env:USERPROFILE\ngrok.log
             Exit 1
           }
 
           if (-not (Test-Path $signalFile)) {
-            Write-Output "Signal file not found. Retrying..."
+            Write-Output "Signal file not found on Desktop. Retrying..."
             Start-Sleep -Seconds 10
             $elapsed += 10
             continue
           }
 
-          Write-Output "Signal file found!"
+          Write-Output "Signal file found on Desktop!"
           $ngrokRunning = $false
         }
 
