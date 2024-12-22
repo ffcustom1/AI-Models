@@ -27,5 +27,11 @@ jobs:
 
     - name: Start ngrok tunnel
       run: |
-        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389' -PassThru | Out-File -FilePath $env:USERPROFILE\ngrok.log -Append
-        Write-Output "ngrok tunnel started. RDP is enabled."
+        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
+
+    - name: Keep job alive
+      run: |
+        Write-Output "RDP is active. Keeping the job alive."
+        while ($true) {
+          Start-Sleep -Seconds 3600
+        }
