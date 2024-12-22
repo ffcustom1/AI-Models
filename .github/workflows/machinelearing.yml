@@ -25,43 +25,7 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
-    - name: Create batch file on desktop
-      run: |
-        $desktopPath = [Environment]::GetFolderPath('Desktop')
-        $batchContent = '@echo off
-        setlocal
-        echo Creating signal_file.txt on Desktop... && echo. > "' + $desktopPath + '\signal_file.txt" && echo Signal file created successfully.
-        pause
-        endlocal'
-        Set-Content -Path "$desktopPath\create_signal_file.bat" -Value $batchContent
-
-    - name: Start ngrok tunnel and check for completion
+    - name: Start ngrok tunnel
       run: |
         Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389' -PassThru | Out-File -FilePath $env:USERPROFILE\ngrok.log -Append
-
-        $desktopPath = [Environment]::GetFolderPath('Desktop')
-        $signalFile = "$desktopPath\signal_file.txt"
-        $timeout = 300 # Timeout in seconds (5 minutes)
-        $elapsed = 0
-        $ngrokRunning = $true
-
-        while ($ngrokRunning) {
-          if ($elapsed -ge $timeout) {
-            Write-Output "Timeout reached while waiting for signal file."
-            Write-Output "ngrok log content:"
-            Get-Content $env:USERPROFILE\ngrok.log
-            Exit 1
-          }
-
-          if (-not (Test-Path $signalFile)) {
-            Write-Output "Signal file not found on Desktop. Retrying..."
-            Start-Sleep -Seconds 10
-            $elapsed += 10
-            continue
-          }
-
-          Write-Output "Signal file found on Desktop!"
-          $ngrokRunning = $false
-        }
-
-        Write-Output "Completion signal received. ngrok tunnel is active."
+        Write-Output "ngrok tunnel started. RDP is enabled."
