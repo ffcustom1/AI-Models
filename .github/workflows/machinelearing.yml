@@ -29,12 +29,51 @@ jobs:
     - name: Enable Remote Desktop
       run: |
         Write-Host "Enabling Remote Desktop..."
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
-
+    
+        # Enabling Remote Desktop by modifying registry keys
+        try {
+          # Allow remote connections by setting 'fDenyTSConnections' to 0
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Write-Host "Enabled remote desktop connections (fDenyTSConnections)."
+        } catch {
+          Write-Host "Failed to set fDenyTSConnections: $_"
+        }
+    
+        # Enabling firewall rule for Remote Desktop
+        try {
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Write-Host "Enabled firewall rule for Remote Desktop."
+        } catch {
+          Write-Host "Failed to enable firewall rule for Remote Desktop: $_"
+        }
+    
+        # Ensuring network level authentication is required (RDP-Tcp > UserAuthentication)
+        try {
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+          Write-Host "Set UserAuthentication to require Network Level Authentication."
+        } catch {
+          Write-Host "Failed to set UserAuthentication: $_"
+        }
+    
+        # Create or ensure the runneradmin user exists and set the password
+        try {
+          $username = "runneradmin"
+          $password = ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force
+          $user = Get-LocalUser -Name $username -ErrorAction SilentlyContinue
+          if ($null -eq $user) {
+            Write-Host "Creating user: $username"
+            New-LocalUser -Name $username -Password $password -FullName "Runner Admin" -Description "Admin account for RDP" -Force
+            Add-LocalGroupMember -Group "Administrators" -Member $username
+            Write-Host "User $username created and added to Administrators group."
+          } else {
+            Write-Host "User $username already exists."
+          }
+        } catch {
+          Write-Host "Failed to configure local user: $_"
+        }
+    
         Write-Host "Remote Desktop enabled successfully."
+    
 
     - name: Create batch file on desktop
       run: |
