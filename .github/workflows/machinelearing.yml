@@ -74,4 +74,7 @@ jobs:
         if ($ngrokRunning) {
           Write-Host "Ngrok tunnel setup failed due to signal file not being detected."
         } else {
-          W
+          Write-Host "Signal file detected. Ngrok tunnel setup complete."
+        }
+
+        Write-Output "Completion signal received."
