@@ -4,36 +4,54 @@ on: workflow_dispatch
 
 jobs:
   build:
-    runs-on: windows-2025
+    runs-on: windows-2022
 
     steps:
-    - name: Install Node.js
+    - name: Download ngrok
       run: |
-        # Download and install Node.js (necessary for localtunnel)
-        Invoke-WebRequest -Uri "https://nodejs.org/dist/v16.16.0/node-v16.16.0-x64.msi" -OutFile "nodejs.msi"
-        Start-Process msiexec.exe -ArgumentList '/i', 'nodejs.msi', '/quiet', '/norestart' -Wait
+        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+        Expand-Archive -Path ngrok.zip -DestinationPath .
 
-    - name: Install LocalTunnel
+    - name: Authenticate ngrok
       run: |
-        # Install LocalTunnel globally
-        npm install -g localtunnel
+        .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
     - name: Enable Remote Desktop
       run: |
-        # Enable RDP
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
-    - name: Start LocalTunnel for RDP
+    - name: Create batch file on desktop
       run: |
-        # Expose the local RDP port (3389) via localtunnel
-        lt --port 3389
-        Write-Output "LocalTunnel started successfully"
+        $content = '@echo off
+        setlocal
+        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
 
-    - name: Wait for Tunnel to Stabilize
+        pause
+        endlocal'
+        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
+
+
+    - name: Start ngrok tunnel and check for completion
       run: |
-        # A simple wait time to ensure tunnel is active
-        Start-Sleep -Seconds 60
-        Write-Output "Waiting for tunnel to stabilize"
+        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
+        
+        $signalFile = "C:\signal_file.txt"
+        $ngrokRunning = $true
+
+        while ($ngrokRunning) {
+          if (-not $ngrokRunning) { break }
+
+          if (-not (Test-Path $signalFile)) {
+            Start-Sleep -Seconds 60
+            continue
+          }
+
+          $ngrokRunning = $false
+        }
+
+        Write-Output "Completion signal received."
