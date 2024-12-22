@@ -7,111 +7,35 @@ jobs:
     runs-on: windows-2022
 
     steps:
-    - name: Download ngrok
+    - name: Download TightVNC
       run: |
-        Write-Host "Starting download of ngrok..."
-        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-        Write-Host "ngrok.zip downloaded successfully."
+        Write-Host "Downloading TightVNC installer..."
+        Invoke-WebRequest -Uri https://www.tightvnc.com/download.php -OutFile TightVNCSetup.exe
 
-        Write-Host "Extracting ngrok..."
-        Expand-Archive -Path ngrok.zip -DestinationPath .
-        Write-Host "ngrok extracted successfully."
-
-    - name: Authenticate ngrok
+    - name: Install TightVNC
       run: |
-        Write-Host "Starting ngrok authentication..."
-        .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
-        Write-Host "ngrok authentication successful."
+        Write-Host "Installing TightVNC silently..."
+        Start-Process -FilePath "TightVNCSetup.exe" -ArgumentList "/S" -Wait
 
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+    - name: Start TightVNC Server
+      run: |
+        Write-Host "Starting TightVNC Server..."
+        Start-Process "C:\Program Files\TightVNC\tvnserver.exe" -ArgumentList "-start"
 
+    - name: Configure Firewall for TightVNC
+      run: |
+        Write-Host "Configuring Firewall for TightVNC..."
+        Enable-NetFirewallRule -DisplayGroup "VNC"
+    
     - name: Enable Remote Desktop
       run: |
         Write-Host "Enabling Remote Desktop..."
-    
-        # Enabling Remote Desktop by modifying registry keys
-        try {
-          # Allow remote connections by setting 'fDenyTSConnections' to 0
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-          Write-Host "Enabled remote desktop connections (fDenyTSConnections)."
-        } catch {
-          Write-Host "Failed to set fDenyTSConnections: $_"
-        }
-    
-        # Enabling firewall rule for Remote Desktop
-        try {
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          Write-Host "Enabled firewall rule for Remote Desktop."
-        } catch {
-          Write-Host "Failed to enable firewall rule for Remote Desktop: $_"
-        }
-    
-        # Ensuring network level authentication is required (RDP-Tcp > UserAuthentication)
-        try {
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-          Write-Host "Set UserAuthentication to require Network Level Authentication."
-        } catch {
-          Write-Host "Failed to set UserAuthentication: $_"
-        }
-    
-        # Create or ensure the runneradmin user exists and set the password
-        try {
-          $username = "runneradmin"
-          $password = ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force
-          $user = Get-LocalUser -Name $username -ErrorAction SilentlyContinue
-          if ($null -eq $user) {
-            Write-Host "Creating user: $username"
-            New-LocalUser -Name $username -Password $password -FullName "Runner Admin" -Description "Admin account for RDP" -Force
-            Add-LocalGroupMember -Group "Administrators" -Member $username
-            Write-Host "User $username created and added to Administrators group."
-          } else {
-            Write-Host "User $username already exists."
-          }
-        } catch {
-          Write-Host "Failed to configure local user: $_"
-        }
-    
-        Write-Host "Remote Desktop enabled successfully."
-    
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
-    - name: Create batch file on desktop
+    - name: Check TightVNC status
       run: |
-        Write-Host "Creating batch file on desktop..."
-        $content = '@echo off
-        setlocal
-        echo Creating signal_file.txt... && echo. > C:\signal_file.txt && echo Signal file created successfully.
-
-        pause
-        endlocal'
-        Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
-        Write-Host "Batch file created successfully at: $env:USERPROFILE\Desktop\create_signal_file.bat"
-
-    - name: Start ngrok tunnel and check for completion
-      run: |
-        Write-Host "Starting ngrok tunnel on port 3389..."
-        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
-        Write-Host "ngrok tunnel started."
-
-        $signalFile = "C:\signal_file.txt"
-        $ngrokRunning = $true
-
-        Write-Host "Checking for signal file presence..."
-
-        while ($ngrokRunning) {
-          if (-not $ngrokRunning) { 
-            Write-Host "ngrok process completed or was cancelled."
-            break
-          }
-
-          if (-not (Test-Path $signalFile)) {
-            Write-Host "Signal file not found, waiting..."
-            Start-Sleep -Seconds 60
-            continue
-          }
-
-          Write-Host "Signal file found. Completing ngrok process..."
-          $ngrokRunning = $false
-        }
-
-        Write-Host "Completion signal received. Exiting process."
+        Write-Host "Checking TightVNC Server status..."
+        Get-Service -Name tvnserver
