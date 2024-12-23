@@ -10,7 +10,7 @@ jobs:
     - name: Download TightVNC
       run: |
         Write-Host "Downloading TightVNC..."
-        Invoke-WebRequest -Uri "https://www.tightvnc.com/download/2.8.63/tightvnc-2.8.63-setup-64bit.msi" -OutFile "tightvnc.msi"
+        Invoke-WebRequest -Uri "https://www.tightvnc.com/download/2.8.85/tightvnc-2.8.85-gpl-setup-64bit.msi" -OutFile "tightvnc.msi"
         Write-Host "TightVNC downloaded successfully."
 
     - name: Install TightVNC
