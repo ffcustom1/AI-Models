@@ -11,25 +11,31 @@ jobs:
       run: |
         Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
         Start-Sleep -Seconds 5  # Give some time for the download to complete
-
+        
+    # Default, optional.
     - name: Enable TS
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
 
-    - name: Enable Firewall Rule for RDP
-      run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-
-    - name: Set User Authentication for RDP
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-
-    - name: Set Password for Runner Admin User
-      run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
+    - name: Configure RDP User Password
+      run: |
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
 
     - name: Start Playit and Set Up RDP Tunnel
       env:
         PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
+        Write-Host "Starting Playit and setting up RDP tunnel..."
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
+        Write-Host "Playit tunnel started successfully."
+
+    - name: Wait for 10 seconds before moving to the next step
+      run: |
+        Write-Host "Waiting for 10 seconds before moving to the next step..."
+        Start-Sleep -Seconds 10  # Wait for 10 seconds
 
     - name: Create batch file on desktop
       run: |
@@ -47,7 +53,7 @@ jobs:
         Write-Host "Waiting for signal file..."
         $signalFile = "C:\signal_file.txt"
         $retryCount = 0
-        $maxRetries = 9999
+        $maxRetries = 10
         while (-not (Test-Path $signalFile)) {
           Write-Host "Signal file not found, waiting for 60 seconds..."
           Start-Sleep -Seconds 60
