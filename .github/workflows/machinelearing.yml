@@ -23,20 +23,6 @@ jobs:
       run: |
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
 
-    - name: Start Playit and Set Up RDP Tunnel
-      env:
-        PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
-      run: |
-        Write-Host "Starting Playit and setting up RDP tunnel..."
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
-        Write-Host "Playit tunnel started successfully."
-
-    - name: Wait for 10 seconds before moving to the next step
-      run: |
-        Write-Host "Waiting for 10 seconds before moving to the next step..."
-        Start-Sleep -Seconds 10  # Wait for 10 seconds
-
     - name: Create batch file on desktop
       run: |
         Write-Host "Creating batch file to generate signal file..."
@@ -47,6 +33,15 @@ jobs:
         endlocal'
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
         Write-Host "Batch file 'create_signal_file.bat' created successfully."
+
+    - name: Start Playit and Set Up RDP Tunnel
+      env:
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
+      run: |
+        Write-Host "Starting Playit and setting up RDP tunnel..."
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
+        Write-Host "Playit tunnel started successfully."
 
     - name: Wait for Signal File
       run: |
