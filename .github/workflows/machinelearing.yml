@@ -1,4 +1,4 @@
-name: CI
+name: WINCI
 
 on: workflow_dispatch
 
@@ -7,33 +7,44 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Download ngrok
+    - name: Download TightVNC
       run: |
-        Write-Host "Downloading ngrok..."
-        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-        Write-Host "Expanding ngrok archive..."
-        Expand-Archive -Path ngrok.zip -DestinationPath .
-        Write-Host "ngrok downloaded and extracted successfully."
+        Write-Host "Downloading TightVNC..."
+        Invoke-WebRequest -Uri "https://www.tightvnc.com/download/2.8.63/tightvnc-2.8.63-setup-64bit.msi" -OutFile "tightvnc.msi"
+        Write-Host "TightVNC downloaded successfully."
 
-    - name: Authenticate ngrok
+    - name: Install TightVNC
       run: |
-        Write-Host "Authenticating ngrok..."
-        .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
-        Write-Host "ngrok authenticated successfully."
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        Write-Host "Installing TightVNC..."
+        Start-Process msiexec.exe -ArgumentList '/i tightvnc.msi /quiet /norestart ADDLOCAL=Server,Viewer' -Wait
+        Write-Host "TightVNC installed successfully."
 
-    - name: Enable Remote Desktop
+    - name: Configure TightVNC Server
       run: |
-        Write-Host "Enabling Remote Desktop..."
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-        Write-Host "Remote Desktop connections enabled."
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Write-Host "Remote Desktop firewall rules enabled."
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-        Write-Host "User authentication for RDP set."
-        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
-        Write-Host "User 'runneradmin' created with a password."
+        Write-Host "Configuring TightVNC Server..."
+        $password = ConvertTo-SecureString "P@ssw0rd!" -AsPlainText -Force
+        $viewOnlyPassword = ConvertTo-SecureString "ViewOnly123" -AsPlainText -Force
+
+        Write-Host "Setting full access password..."
+        & "C:\Program Files\TightVNC\tvnserver.exe" -controlservice -setpassword $password
+
+        Write-Host "Setting view-only password..."
+        & "C:\Program Files\TightVNC\tvnserver.exe" -controlservice -setviewonlypassword $viewOnlyPassword
+
+        Write-Host "Starting TightVNC Service..."
+        Start-Service -Name tvnserver
+        Write-Host "TightVNC Service started successfully."
+
+    - name: Retrieve TightVNC Connection Details
+      run: |
+        Write-Host "Retrieving connection details..."
+        $ipAddress = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias Ethernet | Where-Object {$_.IPAddress -ne "127.0.0.1"}).IPAddress
+        $port = 5900  # Default TightVNC port
+        Write-Host "TightVNC is running at:"
+        Write-Host "IP Address: $ipAddress"
+        Write-Host "Port: $port"
+        Write-Host "Full Access Password: P@ssw0rd!"
+        Write-Host "View-Only Password: ViewOnly123"
 
     - name: Create batch file on desktop
       run: |
@@ -46,35 +57,19 @@ jobs:
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
         Write-Host "Batch file 'create_signal_file.bat' created successfully."
 
-    - name: Start ngrok tunnel and check for completion
+    - name: Wait for Signal File
       run: |
-        Write-Host "Starting ngrok tunnel..."
-        Start-Process -NoNewWindow -FilePath .\ngrok.exe -ArgumentList 'tcp 3389'
-        Write-Host "Ngrok tunnel started for RDP on port 3389."
-        
+        Write-Host "Waiting for signal file..."
         $signalFile = "C:\signal_file.txt"
-        $ngrokRunning = $true
         $retryCount = 0
         $maxRetries = 10
-        while ($ngrokRunning) {
-          Write-Host "Checking if signal file exists..."
-          if (-not (Test-Path $signalFile)) {
-            Write-Host "Signal file not found, waiting for 60 seconds..."
-            Start-Sleep -Seconds 60
-            $retryCount++
-            if ($retryCount -ge $maxRetries) {
-              Write-Host "Maximum retries reached. Signal file not found."
-              break
-            }
-            continue
+        while (-not (Test-Path $signalFile)) {
+          Write-Host "Signal file not found, waiting for 60 seconds..."
+          Start-Sleep -Seconds 60
+          $retryCount++
+          if ($retryCount -ge $maxRetries) {
+            Write-Host "Maximum retries reached. Signal file not found."
+            exit 1
           }
-          $ngrokRunning = $false
         }
-        
-        if ($ngrokRunning) {
-          Write-Host "Ngrok tunnel setup failed due to signal file not being detected."
-        } else {
-          Write-Host "Signal file detected. Ngrok tunnel setup complete."
-        }
-
-        Write-Output "Completion signal received."
+        Write-Host "Signal file detected. Workflow complete."
