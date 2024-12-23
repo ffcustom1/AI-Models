@@ -48,7 +48,7 @@ jobs:
         Write-Host "Waiting for signal file..."
         $signalFile = "C:\signal_file.txt"
         $retryCount = 0
-        $maxRetries = 10
+        $maxRetries = 9999
         while (-not (Test-Path $signalFile)) {
           Write-Host "Signal file not found, waiting for 60 seconds..."
           Start-Sleep -Seconds 60
