@@ -34,17 +34,15 @@ jobs:
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
         Write-Host "Batch file 'create_signal_file.bat' created successfully."
 
-    - name: Start Playit and Set Up RDP Tunnel
+    - name: Start Playit and Set Up RDP Tunnel & Wait for Signal File
       env:
         PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
         Write-Host "Starting Playit and setting up RDP tunnel..."
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
         Write-Host "Playit tunnel started successfully."
 
-    - name: Wait for Signal File
-      run: |
         Write-Host "Waiting for signal file..."
         $signalFile = "C:\signal_file.txt"
         $retryCount = 0
