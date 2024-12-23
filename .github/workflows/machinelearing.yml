@@ -46,6 +46,12 @@ jobs:
         Write-Host "Full Access Password: P@ssw0rd!"
         Write-Host "View-Only Password: ViewOnly123"
 
+    - name: Start TightVNC Viewer
+      run: |
+        Write-Host "Starting TightVNC Viewer..."
+        Start-Process "C:\Program Files\TightVNC\Tvnviewer.exe" -ArgumentList "$ipAddress::5900"
+        Write-Host "TightVNC Viewer started successfully."
+
     - name: Create batch file on desktop
       run: |
         Write-Host "Creating batch file to generate signal file..."
