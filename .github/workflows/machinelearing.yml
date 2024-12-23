@@ -7,50 +7,29 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Download TightVNC
+    - name: Download and Install Playit
       run: |
-        Write-Host "Downloading TightVNC..."
-        Invoke-WebRequest -Uri "https://www.tightvnc.com/download/2.8.85/tightvnc-2.8.85-gpl-setup-64bit.msi" -OutFile "tightvnc.msi"
-        Write-Host "TightVNC downloaded successfully."
+        Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
+        Start-Sleep -Seconds 5  # Give some time for the download to complete
 
-    - name: Install TightVNC
+    - name: Enable TS
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+
+    - name: Enable Firewall Rule for RDP
+      run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    - name: Set User Authentication for RDP
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+
+    - name: Set Password for Runner Admin User
+      run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
+
+    - name: Start Playit and Set Up RDP Tunnel
+      env:
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
-        Write-Host "Installing TightVNC..."
-        Start-Process msiexec.exe -ArgumentList '/i tightvnc.msi /quiet /norestart ADDLOCAL=Server,Viewer' -Wait
-        Write-Host "TightVNC installed successfully."
-
-    - name: Configure TightVNC Server
-      run: |
-        Write-Host "Configuring TightVNC Server..."
-        $password = ConvertTo-SecureString "P@ssw0rd!" -AsPlainText -Force
-        $viewOnlyPassword = ConvertTo-SecureString "ViewOnly123" -AsPlainText -Force
-
-        Write-Host "Setting full access password..."
-        & "C:\Program Files\TightVNC\tvnserver.exe" -controlservice -setpassword $password
-
-        Write-Host "Setting view-only password..."
-        & "C:\Program Files\TightVNC\tvnserver.exe" -controlservice -setviewonlypassword $viewOnlyPassword
-
-        Write-Host "Starting TightVNC Service..."
-        Start-Service -Name tvnserver
-        Write-Host "TightVNC Service started successfully."
-
-    - name: Retrieve TightVNC Connection Details
-      run: |
-        Write-Host "Retrieving connection details..."
-        $ipAddress = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias Ethernet | Where-Object {$_.IPAddress -ne "127.0.0.1"}).IPAddress
-        $port = 5900  # Default TightVNC port
-        Write-Host "TightVNC is running at:"
-        Write-Host "IP Address: $ipAddress"
-        Write-Host "Port: $port"
-        Write-Host "Full Access Password: P@ssw0rd!"
-        Write-Host "View-Only Password: ViewOnly123"
-
-    - name: Start TightVNC Viewer
-      run: |
-        Write-Host "Starting TightVNC Viewer..."
-        Start-Process "C:\Program Files\TightVNC\Tvnviewer.exe" -ArgumentList "$ipAddress::5900"
-        Write-Host "TightVNC Viewer started successfully."
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
 
     - name: Create batch file on desktop
       run: |
@@ -68,7 +47,7 @@ jobs:
         Write-Host "Waiting for signal file..."
         $signalFile = "C:\signal_file.txt"
         $retryCount = 0
-        $maxRetries = 10
+        $maxRetries = 9999
         while (-not (Test-Path $signalFile)) {
           Write-Host "Signal file not found, waiting for 60 seconds..."
           Start-Sleep -Seconds 60
