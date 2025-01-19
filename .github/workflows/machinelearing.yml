@@ -42,7 +42,7 @@ jobs:
       run: |
         Write-Host "Starting Playit and setting up RDP tunnel..."
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
+        #Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
         Write-Host "Playit tunnel started successfully."
 
         Write-Host "Waiting for signal file..."
