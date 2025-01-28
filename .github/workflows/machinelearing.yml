@@ -7,8 +7,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Install brave
-      run: choco install brave -y
+    #- name: Install brave
+    #  run: choco install brave -y
     - name: Download and Install Playit
       run: |
         Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
