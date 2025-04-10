@@ -73,13 +73,12 @@ jobs:
     
         Write-Host "✅ Playit tunnel started successfully in the background."
 
-    - name: Create new virtual desktop
+    - name: Create new virtual desktop with NirCmd
       shell: powershell
       run: |
-        Add-Type -AssemblyName System.Runtime.WindowsRuntime
-        $desktopManagerType = [Windows.System.VirtualDesktop.VirtualDesktopManager, Windows.System.VirtualDesktop, ContentType = WindowsRuntime]
-        $desktopManager = [Activator]::CreateInstance($desktopManagerType)
-        $desktopManager.CreateNewDesktop()
+        Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/nircmd.zip" -OutFile "$env:TEMP\nircmd.zip"
+        Expand-Archive -Path "$env:TEMP\nircmd.zip" -DestinationPath "$env:TEMP\nircmd" -Force
+        Start-Process "$env:TEMP\nircmd\nircmd.exe" -ArgumentList 'sendkeypress ctrl+win+d'
 
 
     - name: Start network_enable.exe in background and wait
