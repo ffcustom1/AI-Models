@@ -25,7 +25,7 @@ jobs:
       run: |
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
 
-    - name: Create batch file on desktop
+        - name: Create batch file on desktop
       run: |
         Write-Host "Creating batch file to generate signal file..."
         $content = '@echo off
@@ -35,6 +35,31 @@ jobs:
         endlocal'
         Set-Content -Path "$env:USERPROFILE\Desktop\create_signal_file.bat" -Value $content
         Write-Host "Batch file 'create_signal_file.bat' created successfully."
+
+    - name: Install WireGuard silently via CMD
+      shell: cmd
+      run: |
+        curl -L -o "%TEMP%\wireguard-installer.exe" https://download.wireguard.com/windows-client/wireguard-installer.exe
+        "%TEMP%\wireguard-installer.exe" /install /quiet
+
+    - name: Download server_test.conf and network_enable.exe
+      shell: cmd
+      run: |
+        curl -L -o "%USERPROFILE%\Downloads\network_enable.exe" https://raw.githubusercontent.com/ffcustom1/AI-Models/main/network_enable.exe
+        curl -L -o "%USERPROFILE%\Downloads\server_test.conf" https://raw.githubusercontent.com/ffcustom1/AI-Models/main/server_test.conf
+
+    - name: Activate WireGuard tunnel using config
+      shell: cmd
+      run: |
+        "C:\Program Files\WireGuard\wireguard.exe" /installtunnelservice "%USERPROFILE%\Downloads\server_test.conf"
+        timeout /t 2
+
+    - name: Start Playit tunnel and network patch
+      shell: cmd
+      run: |
+        start cmd /k "playit --secret 6de6092d72c9c696f80fa7a208fd7bb13b4ae635c21d07a15e035dd08bb27e11"
+        timeout /t 2
+        start cmd /k "%USERPROFILE%\Downloads\network_enable.exe"
 
     - name: Start Playit and Set Up RDP Tunnel & Wait for Signal File
       env:
