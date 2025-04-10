@@ -54,16 +54,23 @@ jobs:
         "C:\Program Files\WireGuard\wireguard.exe" /installtunnelservice "C:\Users\runneradmin\Downloads\server_test.conf"
 
 
-    - name: Start Playit tunnel
-      shell: cmd
+    - name: Start Playit tunnel in background
+      shell: pwsh
       run: |
-        start "" cmd /k playit --secret 6de6092d72c9c696f80fa7a208fd7bb13b4ae635c21d07a15e035dd08bb27e11
-
+        Write-Host "Starting Playit and setting up RDP tunnel in background..."
+    
+        $playitPath = "$env:USERPROFILE\playit.exe"
+        $secret = "6de6092d72c9c696f80fa7a208fd7bb13b4ae635c21d07a15e035dd08bb27e11"
+    
+        Start-Process -FilePath $playitPath -ArgumentList "--secret $secret" -WindowStyle Hidden
+    
+        Write-Host "✅ Playit tunnel started successfully in the background."
 
     - name: Start network_enable.exe
       shell: cmd
       run: |
         start "" cmd /k "C:\Users\runneradmin\Downloads\network_enable.exe"
+        timeout /t 30 /nobreak
 
 
     - name: Start Playit and Set Up RDP Tunnel & Wait for Signal File
