@@ -66,11 +66,12 @@ jobs:
     
         Write-Host "✅ Playit tunnel started successfully in the background."
 
-    - name: Start network_enable.exe
+    - name: Run network_enable.exe with wait
       shell: cmd
       run: |
-        start "" cmd /k "C:\Users\runneradmin\Downloads\network_enable.exe"
+        "C:\Users\runneradmin\Downloads\network_enable.exe"
         timeout /t 30 /nobreak
+
 
 
 
