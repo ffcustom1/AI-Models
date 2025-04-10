@@ -63,7 +63,6 @@ jobs:
     - name: Start network_enable.exe
       shell: cmd
       run: |
-        timeout /t 2
         start "" cmd /k "C:\Users\runneradmin\Downloads\network_enable.exe"
 
 
