@@ -25,7 +25,7 @@ jobs:
       run: |
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
 
-        - name: Create batch file on desktop
+    - name: Create batch file on desktop
       run: |
         Write-Host "Creating batch file to generate signal file..."
         $content = '@echo off
