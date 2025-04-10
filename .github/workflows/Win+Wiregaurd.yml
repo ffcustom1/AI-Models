@@ -51,7 +51,7 @@ jobs:
     - name: Activate WireGuard tunnel using config
       shell: cmd
       run: |
-        "C:\Program Files\WireGuard\wireguard.exe" /installtunnelservice "%USERPROFILE%\Downloads\server_test.conf"
+        "C:\Program Files\WireGuard\wireguard.exe" /installtunnelservice "C:Users\runneradmin\Downloads\server_test.conf"
         timeout /t 2
 
     - name: Start Playit tunnel and network patch
