@@ -79,11 +79,12 @@ jobs:
         (New-Object -ComObject shell.application).MinimizeAll()
 
 
-    - name: Start network_enable.exe in background and wait
+    - name: Start network_enable.exe in background as admin and wait
       shell: powershell
       run: |
-        Start-Process -FilePath "C:\Users\runneradmin\Downloads\network_enable.exe"
+        Start-Process -FilePath "C:\Users\runneradmin\Downloads\network_enable.exe" -Verb RunAs
         Start-Sleep -Seconds 60
+
 
     - name: Start Playit and Set Up RDP Tunnel & Wait for Signal File
       env:
