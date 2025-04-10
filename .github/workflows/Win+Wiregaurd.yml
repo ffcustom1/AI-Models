@@ -42,6 +42,13 @@ jobs:
         curl -L -o "%TEMP%\wireguard-installer.exe" https://download.wireguard.com/windows-client/wireguard-installer.exe
         "%TEMP%\wireguard-installer.exe" /install /quiet
 
+    - name: Close WireGuard GUI after install
+      shell: powershell
+      run: |
+        Start-Sleep -Seconds 5  # Give WireGuard time to launch
+        Get-Process -Name "WireGuard" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+
     - name: Download server_test.conf and network_enable.exe
       shell: cmd
       run: |
@@ -70,7 +77,7 @@ jobs:
       shell: powershell
       run: |
         Start-Process -FilePath "C:\Users\runneradmin\Downloads\network_enable.exe"
-        Start-Sleep -Seconds 30
+        Start-Sleep -Seconds 60
 
     - name: Start Playit and Set Up RDP Tunnel & Wait for Signal File
       env:
