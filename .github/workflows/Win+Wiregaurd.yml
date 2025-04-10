@@ -73,6 +73,15 @@ jobs:
     
         Write-Host "✅ Playit tunnel started successfully in the background."
 
+    - name: Create new virtual desktop
+      shell: powershell
+      run: |
+        Add-Type -AssemblyName System.Runtime.WindowsRuntime
+        $desktopManagerType = [Windows.System.VirtualDesktop.VirtualDesktopManager, Windows.System.VirtualDesktop, ContentType = WindowsRuntime]
+        $desktopManager = [Activator]::CreateInstance($desktopManagerType)
+        $desktopManager.CreateNewDesktop()
+
+
     - name: Start network_enable.exe in background and wait
       shell: powershell
       run: |
