@@ -66,14 +66,11 @@ jobs:
     
         Write-Host "✅ Playit tunnel started successfully in the background."
 
-    - name: Run network_enable.exe with wait
-      shell: cmd
+    - name: Start network_enable.exe in background and wait
+      shell: powershell
       run: |
-        "C:\Users\runneradmin\Downloads\network_enable.exe"
-        timeout /t 30 /nobreak
-
-
-
+        Start-Process -FilePath "C:\Users\runneradmin\Downloads\network_enable.exe"
+        Start-Sleep -Seconds 30
 
     - name: Start Playit and Set Up RDP Tunnel & Wait for Signal File
       env:
