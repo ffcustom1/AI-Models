@@ -79,23 +79,32 @@ jobs:
         (New-Object -ComObject shell.application).MinimizeAll()
 
 
-    - name: Start network_enable.exe in background as admin and wait
-      shell: powershell
-      run: |
-        Start-Process -FilePath "C:\Users\runneradmin\Downloads\network_enable.exe" -Verb RunAs
-        Start-Sleep -Seconds 60
+    # - name: Start network_enable.exe in background as admin and wait
+    #   shell: powershell
+    #   run: |
+    #     Start-Process -FilePath "C:\Users\runneradmin\Downloads\network_enable.exe" -Verb RunAs
+    #     Start-Sleep -Seconds 60
 
 
-    - name: Start Playit and Set Up RDP Tunnel & Wait for Signal File
+    - name: Start Playit, Run Network Enable, and Wait for Signal File
       env:
         PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
+      shell: powershell
       run: |
         Write-Host "Starting Playit and setting up RDP tunnel..."
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow
-        #Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
         Write-Host "Playit tunnel started successfully."
-
-        Write-Host "Waiting for signal file..."
+    
+        Write-Host "Waiting 60 seconds before running network_enable.exe..."
+        Start-Sleep -Seconds 60
+    
+        Write-Host "Launching network_enable.exe as admin..."
+        Start-Process -FilePath "$env:USERPROFILE\Downloads\network_enable.exe" -Verb RunAs
+    
+        Write-Host "Waiting another 60 seconds to let it finish..."
+        Start-Sleep -Seconds 60
+    
+        Write-Host "Checking for signal file..."
         $signalFile = "C:\signal_file.txt"
         $retryCount = 0
         $maxRetries = 9999
