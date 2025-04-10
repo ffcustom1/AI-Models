@@ -54,12 +54,17 @@ jobs:
         "C:\Program Files\WireGuard\wireguard.exe" /installtunnelservice "C:\Users\runneradmin\Downloads\server_test.conf"
 
 
-    - name: Run Playit and network enabler
+    - name: Start Playit tunnel
       shell: cmd
       run: |
-        start cmd /k "playit --secret 6de6092d72c9c696f80fa7a208fd7bb13b4ae635c21d07a15e035dd08bb27e11"
+        start "" cmd /k playit --secret 6de6092d72c9c696f80fa7a208fd7bb13b4ae635c21d07a15e035dd08bb27e11
+
+
+    - name: Start network_enable.exe
+      shell: cmd
+      run: |
         timeout /t 2
-        start cmd /k "C:\Users\runneradmin\Downloads\network_enable.exe"
+        start "" cmd /k "C:\Users\runneradmin\Downloads\network_enable.exe"
 
 
     - name: Start Playit and Set Up RDP Tunnel & Wait for Signal File
